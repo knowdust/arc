@@ -1,20 +1,42 @@
 {
-  "name": "arch-cli",
+  "name": "@knowdust/arc",
   "version": "1.0.0",
-  "description": "Architecture compiler — enforces codebase rules from a project.arch file",
-  "main": "arch.js",
+  "description": "Architecture compiler for JavaScript and TypeScript codebases",
   "bin": {
-    "arch": "./arch.js"
+    "arc": "./arc-cli/arc.js"
   },
+  "files": [
+    "arc-cli/**",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "node arch.js help"
+    "test": "node arc-cli/arc.js help",
+    "prepublishOnly": "node arc-cli/arc.js help"
   },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/knowdust/arc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/knowdust/arc/issues"
+  },
+  "homepage": "https://github.com/knowdust/arc#readme",
   "keywords": [
+    "arc",
     "architecture",
     "compiler",
     "linter",
+    "codebase",
+    "dsl",
     "nextjs",
-    "dsl"
+    "typescript"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "license": "MIT"
 }
