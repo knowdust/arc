@@ -1,140 +1,250 @@
-# arc — Architecture Compiler for Codebases
+# arc
 
-> A single source of truth for your codebase architecture — like `schema.prisma` but for layers, rules, and flows.
+**Architecture compiler for JavaScript and TypeScript codebases.**
 
-**arc** is a zero-dependency architecture compiler that enforces codebase rules at build time.
+Define your architecture once in `.arc`. Enforce it on every build. Give your entire codebase to any LLM in one file.
 
-```md
-schema.prisma    → single source of truth for your DB
-.arc             → single source of truth for your architecture
+```text
+arc check      → fails the build on architecture violations
+arc map        → generates a full codebase map
+arc context    → generates an LLM-ready context file
+arc scaffold   → creates files following your conventions
+arc init       → starts from a built-in template
 ```
 
-When `npm run build` runs, your architecture is **validated like types are validated**.
-If you violate a rule, the build fails with a clear error — just like a TypeScript error.
+Zero dependencies. Pure Node.js. Works anywhere Node ≥ 18 runs.
 
 ---
 
-## Features
+## The idea
 
-- ✅ **Layered Architecture Enforcement** — Define layers and what they can import
-- ✅ **Export Shape Validation** — Enforce what types of exports each layer can have
-- ✅ **Filename Conventions** — Require specific naming patterns per layer
-- ✅ **Circular Import Detection** — Find and prevent import cycles
-- ✅ **Dead Export Detection** — Identify exported symbols that are never used
-- ✅ **Custom Rules** — Forbid imports, packages, or code patterns with error/warning severity
-- ✅ **Data Flow Documentation** — Document how data moves through your app
-- ✅ **Auto-Generated Maps** — Generate `.arc-output/CODEBASE.md` from your .arc file
-- ✅ **File Scaffolding** — Generate new files following your conventions
-- ✅ **Zero Dependencies** — Pure Node.js, works anywhere
-- ✅ **AI-Readable Context** — Paste `.arc` into Claude/Cursor for instant understanding
+`prisma/schema.prisma` is your single source of truth for the database.
+`.arc` is your single source of truth for your architecture.
 
----
-
-## Quick Start
-
-### 1. Install
-
-Copy the `arc-cli/` folder into your project root.
-
-### 2. Create `.arc` file
-
-```arc
-# .arc — Architecture definition
+```text
+#.arc
 
 arc "my-app" {
-  name:    "Feature Based Architecture"
   version  "1.0.0"
-  stack    ["nextjs", "typescript", "prisma", "supabase"]
+  stack    nextjs + supabase + prisma + tailwind
   language typescript
 }
 
-# Enable advanced analysis
-enforce no-circular-imports
-enforce no-dead-exports
-
 layer types {
-  path        "src/types"
-  description "TypeScript type definitions"
-  can import  []
-  allow exports [type, interface, enum]   # Only types allowed
-}
-
-layer lib {
-  path        "src/lib"
-  description "Infrastructure code"
-  can import  [types]
+  path       "src/types"
+  can import []
 }
 
 layer actions {
-  path        "src/actions"
-  description "Server actions — all DB access lives here"
-  can import  [types, lib]
+  path       "src/actions"
+  can import [types, lib]
   require directive "use server"
-  require exports [async-function]        # All exports must be async
-}
-
-layer hooks {
-  path        "src/hooks"
-  description "React hooks"
-  can import  [types, lib]
-  require directive "use client"
-  require filename "use*.ts"              # Enforce naming convention
 }
 
 layer components {
-  path        "src/components"
-  description "React components"
-  can import  [types, hooks, lib]
+  path       "src/components"
+  can import [types, hooks]
 }
 
 rule "no-prisma-in-components" {
   severity    error
-  description "Components cannot import Prisma directly"
+  description "Components must not import Prisma — use server actions"
   forbid import "@prisma/client"
   except in   [lib, actions]
 }
 
-rule "no-lodash" {
-  severity    warning
-  description "Use native JS instead"
-  forbid package "lodash"
-  except in   []
-}
-
-rule "no-console-logs" {
-  severity    warning
-  description "Remove console.log before shipping"
-  forbid pattern "console.log"
-  in layers   [components, actions]
-}
+enforce no-circular-imports
 ```
 
-### 3. Add to `package.json`
+Then:
+
+```bash
+arc check
+# ✗  src/components/app/NoteList.tsx:2
+# └─ [import-boundary] [components] cannot import from [actions] → "@/actions/notes"
+```
+
+Your build fails. The violation is caught. Architecture is enforced.
+
+---
+
+## Why arc exists
+
+Every JS/TS project has the same problems:
+
+- **"Where does this code go?"** — answered differently by every developer
+- **"Don't import Prisma in components"** — said in every code review
+- **"The new dev broke the architecture"** — caught after the fact
+- **"The LLM doesn't know our patterns"** — explained from scratch every session
+
+Arc solves all of them with one file.
+
+---
+
+## Installation
+
+### Option 1 — Copy into your project (recommended)
+
+```bash
+# Clone arc into your project
+git clone https://github.com/your-username/arc arc-cli
+cd arc-cli && rm -rf .git
+
+# Add to package.json
+```
 
 ```json
 {
   "scripts": {
-    "build": "arc check && next build",
-    "arc:check": "node arc/arc-cli/arc.js check",
-    "arc:map": "node arc/arc-cli/arc.js map",
-    "arc:context": "node arc/arc-cli/arc.js context",
-    "arc:print": "node arc/arc-cli/arc.js print",
-    "arc:generate": "node arc/arc-cli/arc.js generate",
-    "arc:sync": "pnpm arc:check && pnpm arc:map && pnpm arc:context"
+    "build":       "node arc-cli/arc.js check && next build",
+    "arc:check":   "node arc-cli/arc.js check",
+    "arc:map":     "node arc-cli/arc.js map",
+    "arc:context": "node arc-cli/arc.js context",
+    "arc:print":   "node arc-cli/arc.js print",
+    "arc:scaffold":"node arc-cli/arc.js scaffold"
   }
 }
 ```
 
-### 4. Run
+### Option 2 — Global install
 
 ```bash
-npm run arc:generate  # Auto-generate from package.json
-npm run arc:check     # Validate architecture
-npm run arc:map       # Generate .arc-output/CODEBASE.md
-npm run arc:context   # Generate .arc-output/LLM_CONTEXT.md
-npm run arc:print     # Pretty-print your architecture
-npm run arc:sync      # Check + map + context in one command
-npm run build         # Now fails on violations!
+npm install -g arc-cli
+arc help
+```
+
+---
+
+## Getting started
+
+### 1. Initialize from a template
+
+```bash
+arc init nextjs
+# → creates .arc with Next.js App Router architecture
+```
+
+Available templates:
+
+- `vanilla` — Pure HTML + CSS + JavaScript
+- `react-spa` — React + Vite + TypeScript
+- `nextjs` — Next.js App Router + TypeScript
+- `express-api` — Node.js + Express + TypeScript
+- `cli` — CLI Tool (Node.js + TypeScript)
+- `extension` — Browser Extension (TypeScript)
+
+### 2. Edit `.arc` to match your codebase
+
+```text
+arc "my-app" {
+  version  "1.0.0"
+  stack    nextjs + supabase + prisma
+  language typescript
+}
+
+layer types {
+  path        "src/types"
+  description "TypeScript types only."
+  can import  []
+}
+
+layer actions {
+  path        "src/actions"
+  description "Server actions. All DB access here."
+  can import  [types, lib]
+  require directive "use server"
+}
+
+# ... more layers, rules, flows, features
+```
+
+### 3. Run your first check
+
+```bash
+arc check
+```
+
+### 4. Add to your build
+
+```json
+"build": "arc check && next build"
+```
+
+Now architecture violations fail the build — exactly like TypeScript fails on type errors.
+
+---
+
+## The `.arc` DSL
+
+### Layers
+
+Layers are the building blocks of your architecture. Each layer has a path and defines exactly what it can import from.
+
+```text
+layer hooks {
+  path        "src/hooks"
+  description "React hooks. Client-side only."
+  can import  [types, lib]
+  require directive "use client"
+  require filename  "use*.ts"
+}
+```
+
+### Rules
+
+Rules enforce specific patterns across your codebase.
+
+```text
+rule "no-process-env-scatter" {
+  severity    error
+  description "All env vars through src/config only"
+  forbid pattern "process.env."
+  in layers   [actions, components, hooks]
+}
+```
+
+### Global enforcement
+
+Global checks that run across the entire codebase.
+
+```text
+enforce no-circular-imports
+enforce no-dead-exports
+```
+
+### Features
+
+Document what's already built. Tell your LLM what exists so it doesn't rebuild it.
+
+```text
+features {
+  feature "auth" {
+    description "Google OAuth via Supabase."
+    status      built
+    actions     ["signIn", "signOut", "getSession"]
+    tables      ["auth.users", "public.profiles"]
+  }
+
+  feature "dark-mode" {
+    description "System-aware dark/light theme toggle."
+    status      planned
+  }
+}
+```
+
+### Context
+
+AI-readable summary of your entire project.
+
+```text
+context {
+  summary """
+    Next.js note-taking app. Auth via Supabase.
+    Payments via Polar.sh. DB access only via Prisma in src/actions.
+  """
+  critical-files ["src/types/index.ts", "src/lib/db.ts"]
+  do-not-touch   ["src/components/ui/"]
+}
 ```
 
 ---
@@ -143,344 +253,258 @@ npm run build         # Now fails on violations!
 
 ### `arc check`
 
-Validates your codebase against `.arc` rules.
+Validates your codebase against `project.arc`. Runs 7 analysis passes:
 
-```md
+1. **Import boundaries** — layer A can only import from allowed layers
+2. **Required directives** — `'use server'`, `'use client'` where required
+3. **Filename conventions** — `use*.ts` in hooks, etc.
+4. **Custom rules** — forbidden imports, patterns, packages
+5. **Export shapes** — `types/` exports only types, `actions/` exports only async functions
+6. **Circular imports** — detects A→B→A cycles
+7. **Dead exports** — exported symbols never imported anywhere
+
+```bash
+arc check
+
 ◆ arc check
 
-  Parsed project.arc — 7 layers, 5 rules
+  Parsed project.arc — 7 layers, 6 rules, 2 enforcements
 
   ✗  2 errors:
 
   src/components/app/NoteList.tsx:1
   └─ [import-boundary] [components] cannot import from [actions] → "@/actions/notes"
 
-  src/hooks/useNotes.ts
-  └─ [missing-directive] Missing "use client" — required in [hooks] layer
+  src/hooks/fetchNotes.ts
+  └─ [filename-convention] "fetchNotes.ts" does not match required pattern "use*.ts" in [hooks]
 
-  Architecture check failed.
+  Architecture check failed. 2 errors.
 ```
 
-- Exit code `0` if clean or only warnings
-- Exit code `1` if any errors
+Exit code `0` = clean or warnings only. Exit code `1` = errors found.
 
 ### `arc map`
 
-Generates `.arc-output/CODEBASE.md` with:
+Generates `.arc/CODEBASE.md` — a complete map of your codebase for humans.
 
-- Layer structure and import graph
-- File counts per layer
-- All rules and flows
-- File tree of `src/`
-
-Perfect for onboarding or AI context.
+```bash
+arc map
+# → .arc/CODEBASE.md
+```
 
 ### `arc context`
 
-Generates `.arc-output/LLM_CONTEXT.md` with:
+Generates `.arc/LLM_CONTEXT.md` — upload this to any LLM (Claude, Cursor, Copilot) for instant full codebase understanding.
 
-- AI instruction preamble
-- Layer rules and architecture boundaries
-- Enforcements and custom rules
-- Feature inventory from `features {}`
-- Flows, conventions, and critical files
+```bash
+arc context
+# → .arc/LLM_CONTEXT.md (4-8kb, fits any context window)
+```
 
-Use this file as upload/paste context for Copilot, Claude, Cursor, or GPT.
+**With AI:** paste `LLM_CONTEXT.md` before your prompt. The LLM knows your layers, rules, features, flows, and conventions — no explanation needed. Everything it writes is validated by `arc check`.
 
 ### `arc print`
 
-Pretty-prints your parsed `.arc` file:
+Pretty-prints your parsed architecture to the terminal.
 
-```md
-◆ arc print
-
-  my-app v1.0.0
-  nextjs + typescript + prisma
-
-  Layers (4)
-  types             src/types
-                    imports: none
-  lib               src/lib
-                    imports: types
-  actions           src/actions
-                    imports: types, lib  |  requires: "use server"
-  components        src/components
-                    imports: types, lib
-
-  Rules (2)
-  error    no-prisma-in-components
-           Components cannot import Prisma directly
-  warning  no-console-logs
-           Remove console.log before shipping
+```bash
+arc print
 ```
 
-### `arc scaffold <type> <name>`
+### `arc scaffold`
 
-Generates new files following your conventions:
+Creates new files following your declared conventions.
 
 ```bash
 arc scaffold action payments
-# → Creates src/actions/payments.ts with 'use server'
+# → src/actions/payments.ts (with 'use server' template)
 
-arc scaffold hook Notes
-# → Creates src/hooks/useNotes.ts with 'use client'
+arc scaffold hook Profile
+# → src/hooks/useProfile.ts (with 'use client' template)
 
 arc scaffold component NoteCard
-# → Creates src/components/app/NoteCard.tsx
+# → src/components/app/NoteCard.tsx
+```
+
+### `arc init`
+
+Creates `project.arc` from a built-in template.
+
+```bash
+arc init nextjs
+arc init express-api
+arc init react-spa
 ```
 
 ---
 
-## The `.arc` Language
+## VS Code Extension
 
-Complete DSL reference with all features:
+Syntax highlighting for `.arc` files.
 
-```arc
-# ── Project Declaration ────────────────────────────
+**Install from marketplace:**
 
-arc "project-name" {
-  name:    "Architecture Style Name"    # optional
-  version  "1.0.0"
-  stack    ["nextjs", "typescript", "prisma"]  # array syntax (new)
-  # or: stack nextjs + typescript + prisma       # plus syntax (backward compatible)
-  language typescript
-}
-
-# ── Global Enforcement Flags ───────────────────────
-
-enforce no-circular-imports      # Detect import cycles
-enforce no-dead-exports          # Find unused exports
-enforce no-implicit-any          # TypeScript: no implicit any
-enforce no-floating-promises     # Async calls without await/catch
-
-# ── Layers ─────────────────────────────────────────
-
-layer <name> {
-  path        "<relative-path>"
-  description "<string>"
-  can import  [<layer-name>, ...]
-  
-  # Directive enforcement
-  require directive "<string>"       # e.g. "use server"
-  
-  # Filename conventions
-  require filename "<pattern>"       # e.g. "use*.ts"
-  
-  # Export shape enforcement (NEW)
-  require exports [<type>, ...]      # All exports must be these types
-  allow exports   [<type>, ...]      # Only these export types allowed
-  forbid exports  [<type>, ...]     # These export types forbidden
-  
-  readonly                           # Don't modify in arc scaffold
-}
-
-# Export types: async-function, type, interface, enum, named, default, 
-#               function, class, const
-
-# ── Rules ──────────────────────────────────────────
-
-rule "<id>" {
-  severity    error | warning
-  description "<string>"
-  
-  # Option 1: Forbid imports
-  forbid import "<module>"
-  except in   [<layer>, ...]
-  
-  # Option 2: Forbid packages (NEW)
-  forbid package "<package-name>"
-  except in   [<layer>, ...]
-  
-  # Option 3: Forbid code patterns
-  forbid pattern "<text>"
-  in layers   [<layer>, ...]
-}
-
-# ── Data Flows ─────────────────────────────────────
-
-flow <name> {
-  description "<string>"
-  steps   ["<step>", ...]
-  touches ["<file>", ...]
-  tables  ["<table>", ...]
-  fields  ["<field>", ...]
-}
-
-# ── Conventions ────────────────────────────────────
-
-convention <name> "<pattern-with-{placeholders}>"
-
-# Tokens: {Name} PascalCase, {domain} camelCase, {name} any case
-
-# ── AI Context ─────────────────────────────────────
-
-context {
-  summary """
-    Multi-line summary of your app.
-  """
-  critical-files ["<path>", ...]
-  do-not-touch   ["<path>", ...]
-}
+```text
+ext install arc-language
 ```
+
+**Or install manually:**
+
+```bash
+cd arc-vscode
+npx vsce package
+code --install-extension arc-language-1.0.0.vsix
+```
+
+Provides: keyword highlighting, string coloring, comment support, bracket matching, auto-indent.
 
 ---
 
-## Why arc?
+## Using with AI
 
-**Before arc:**
+The most powerful workflow:
 
-- Architecture rules live in your head or in docs
-- Violations caught in code review (too late)
-- New devs break patterns accidentally
-- No single source of truth
+```bash
+# 1. Generate LLM context
+arc context
 
-**After arc:**
+# 2. Start AI session — paste LLM_CONTEXT.md contents
+# "Here is my codebase context: [paste]
+#  Add a note export feature."
 
-- Architecture is in code (`.arc`)
-- Violations caught at build time (like type errors)
-- CI fails on violations automatically
-- Paste `.arc` into AI for instant context
+# 3. LLM writes code following your architecture
 
----
-
-## How It Works
-
-```md
-.arc (DSL file)
-     │
-     ▼
-  Lexer    → tokens
-     │
-     ▼
-  Parser   → AST
-     │
-     ├─────────────────────────┐
-     ▼                         ▼
-  Checker (7 passes)       Mapper
-     │                         │
-     ├─ Import boundaries      ▼
-     ├─ Directives        CODEBASE.md
-     ├─ Filename patterns
-     ├─ Custom rules
-     ├─ Export shapes
-     ├─ Circular imports
-     └─ Dead exports
-     │
-     ▼
-Violations
+# 4. Validate
+arc check
+# If violations → paste output back to LLM → it self-corrects
 ```
 
-**7 Analysis Passes:**
+The LLM knows:
 
-1. **Import Boundaries** — Layer A can only import from allowed layers
-2. **Directives** — `'use server'`/`'use client'` presence validation
-3. **Filename Conventions** — Pattern matching against required formats
-4. **Custom Rules** — Forbidden imports, packages, and code patterns
-5. **Export Shapes** — Validate export types per layer
-6. **Circular Imports** — Graph-based cycle detection
-7. **Dead Exports** — Symbols exported but never imported
-
-Zero npm dependencies. Pure Node.js built-ins.
-
----
-
-## Backward Compatibility
-
-Arc maintains full backward compatibility with previous versions:
-
-### Legacy Syntax Support
-
-✅ **Old stack syntax** still works:
-
-```arc
-stack nextjs + typescript + prisma  # still valid
-```
-
-✅ **Old file references** supported:
-
-- Both `.arc` and `project.arc` filenames detected
-- Parser gracefully handles missing new fields
-
-✅ **Old layer syntax** works fine:
-
-```arc
-layer actions {
-  path "src/actions"
-  can import [types, lib]
-  require directive "use server"  # no need for new features
-}
-```
-
-### Migration Path
-
-To adopt new features incrementally:
-
-1. **Start simple** — Use basic layers and rules
-2. **Add enforcement flags** — `enforce no-circular-imports` when ready
-3. **Add export rules** — `require exports [async-function]` for specific layers
-4. **Add filename rules** — `require filename "use*.ts"` for conventions
-
-No breaking changes. Update at your own pace.
-
----
-
-## Integration with AI
-
-Paste `.arc` into Claude, Cursor, or Copilot chat:
-
-> "Here's my .arc file. Please help me implement the payment flow."
-
-The AI instantly understands:
-
-- Your full layer structure
-- What can import what
-- Export requirements per layer
-- Filename conventions
+- Every layer and what it can import
+- Every rule and what's forbidden
+- Every feature that already exists (won't rebuild them)
+- Your naming conventions
 - Your data flows
-- Your tech stack
-- What files to never touch
-
-No need to explain your codebase every session.
+- What files are critical and what not to touch
 
 ---
 
-## Tech Stack
+## Full DSL reference
 
-**Made for:**
+### Blocks
 
-- Next.js 14 App Router
-- TypeScript
-- Prisma ORM
-- Supabase (Postgres + Auth)
-- Polar.sh (payments)
-- shadcn/ui + Tailwind
+| Block | Purpose |
+| --- | --- |
+| `arc` | Project name, version, stack |
+| `layer` | Path, import rules, constraints |
+| `rule` | Forbidden imports, patterns, packages |
+| `enforce` | Global flags |
+| `flow` | Data flow documentation |
+| `features` | Feature inventory |
+| `convention` | File naming patterns |
+| `context` | AI-readable summary |
 
-**Works with:**
+### Layer fields
 
-- Any JavaScript/TypeScript codebase
-- Any Node.js-based project
+| Field | Required | Description |
+| --- | --- | --- |
+| `path` | Yes | Relative path to layer root |
+| `description` | No | Human/AI description |
+| `can import` | Yes | List of layer names this layer can import from |
+| `require directive` | No | Required first-line directive |
+| `require filename` | No | Glob pattern all filenames must match |
+| `require exports` | No | Required export type (`async-function`, `type`, etc.) |
+| `allow exports` | No | Whitelist of allowed export types |
+| `forbid exports` | No | Blacklist of forbidden export types |
+| `readonly` | No | Layer must not be modified by `arc scaffold` |
+
+### Rule fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `severity` | Yes | `error` or `warning` |
+| `description` | Yes | Human-readable explanation |
+| `forbid import` | One of | Forbidden import path (partial match) |
+| `forbid pattern` | One of | Forbidden code substring |
+| `forbid package` | One of | Forbidden npm package name |
+| `except in` | No | Layer names excluded from import/package rules |
+| `in layers` | No | Layer names to check pattern in |
+
+### Enforce flags
+
+| Flag | What it detects |
+| --- | --- |
+| `no-circular-imports` | Import cycles across the entire codebase |
+| `no-dead-exports` | Exported symbols never imported anywhere |
+| `no-implicit-any` | TypeScript parameters without explicit types |
+| `no-floating-promises` | Async calls without `await` or `.catch()` |
+
+### Feature fields
+
+| Field | Description |
+| --- | --- |
+| `description` | What the feature does |
+| `status` | `built`, `in-progress`, or `planned` |
+| `files` | Key files for this feature |
+| `actions` | Server action function names |
+| `hooks` | Hook names |
+| `components` | Component names |
+| `routes` | URL routes |
+| `tables` | Database tables used |
+| `depends-on` | Other feature names this depends on |
+| `notes` | Extra notes for the LLM |
 
 ---
 
-## Requirements
+## Project structure
 
-- Node.js ≥ 18.0.0
-- No npm dependencies
+```text
+arc-cli/
+├── arc.js                  CLI entry point
+├── lexer.js                Tokenizer
+├── parser.js               AST builder
+├── checker.js              7-pass rule enforcer
+├── mapper.js               CODEBASE.md generator
+├── context-generator.js    LLM_CONTEXT.md generator
+├── scaffold.js             File generator
+├── graph.js                Circular import detector
+├── templates.js            Built-in project.arc presets
+└── package.json
+
+arc-vscode/
+├── package.json
+├── language-configuration.json
+└── syntaxes/arc.tmLanguage.json
+```
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+The most valuable contributions right now:
+
+- New `project.arc` templates for different stacks
+- Bug reports with minimal reproductions
+- VS Code extension improvements
 
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
 
 ---
 
-## Learn More
+## Status
 
-- See `arc.md` for the full build specification
-- See `project.arc` for a complete example
-- Check `arc-vscode/` for VS Code syntax highlighting
+Early release. The DSL is stable. The compiler is working. The VS Code extension is functional.
+
+Breaking changes to the `.arc` DSL format will always be a major version bump.
+Unknown keywords are always silently skipped — old `.arc` files always parse in new versions.
 
 ---
 
-**arc** — like Prisma for your architecture.
+*arc is to architecture what Prisma is to databases.*
