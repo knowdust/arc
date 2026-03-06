@@ -3,10 +3,20 @@
   "version": "1.0.0",
   "description": "Architecture compiler for JavaScript and TypeScript codebases",
   "bin": {
-    "arc": "./arc-cli/arc.js"
+    "arc": "./bin/arc.js"
   },
   "files": [
-    "arc-cli/**",
+    "bin/**",
+    "arc-cli/arc.js",
+    "arc-cli/checker.js",
+    "arc-cli/context-generator.js",
+    "arc-cli/generator.js",
+    "arc-cli/graph.js",
+    "arc-cli/lexer.js",
+    "arc-cli/mapper.js",
+    "arc-cli/parser.js",
+    "arc-cli/scaffold.js",
+    "arc-cli/project.arc",
     "README.md",
     "LICENSE"
   ],
