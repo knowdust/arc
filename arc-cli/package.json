@@ -1,0 +1,14 @@
+{
+  "name": "arch-cli",
+  "version": "1.0.0",
+  "description": "Architecture compiler — enforces codebase rules from a project.arch file",
+  "main": "arch.js",
+  "bin": {
+    "arch": "./arch.js"
+  },
+  "scripts": {
+    "test": "node arch.js help"
+  },
+  "keywords": ["architecture", "compiler", "linter", "nextjs", "dsl"],
+  "license": "MIT"
+}

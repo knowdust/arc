@@ -1,0 +1,46 @@
+{
+  "name": "arc-language",
+  "displayName": "arc — Architecture DSL",
+  "description": "Syntax highlighting for .arc architecture definition files",
+  "version": "1.0.0",
+  "publisher": "knowdust",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "arc",
+        "aliases": [
+          "Arc",
+          "arc"
+        ],
+        "extensions": [
+          ".arc"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "arc",
+        "scopeName": "source.arc",
+        "path": "./syntaxes/arc.tmLanguage.json"
+      }
+    ]
+  },
+  "keywords": [
+    "architecture",
+    "dsl",
+    "code-architecture",
+    "layers"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/knowdust/arc"
+  }
+}

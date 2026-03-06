@@ -1,0 +1,111 @@
+{
+  "name": "arc",
+  "scopeName": "source.arc",
+  "fileTypes": ["arc"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#multiline-strings" },
+    { "include": "#block-definitions" },
+    { "include": "#field-keywords" },
+    { "include": "#value-keywords" },
+    { "include": "#strings" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.number-sign.arc",
+      "match": "#.*$"
+    },
+    "multiline-strings": {
+      "name": "string.quoted.triple.arc",
+      "begin": "\"\"\"",
+      "end": "\"\"\"",
+      "patterns": []
+    },
+    "strings": {
+      "name": "string.quoted.double.arc",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.arc",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "block-definitions": {
+      "patterns": [
+        {
+          "comment": "arc block — project declaration",
+          "match": "\\b(arc)\\b\\s+(\"[^\"]*\")",
+          "captures": {
+            "1": { "name": "keyword.control.arc" },
+            "2": { "name": "entity.name.type.arc" }
+          }
+        },
+        {
+          "comment": "layer block with identifier name",
+          "match": "\\b(layer)\\b\\s+([a-zA-Z][a-zA-Z0-9_\\-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.arc" },
+            "2": { "name": "entity.name.function.arc" }
+          }
+        },
+        {
+          "comment": "rule block with string name",
+          "match": "\\b(rule)\\b\\s+(\"[^\"]*\")",
+          "captures": {
+            "1": { "name": "keyword.control.arc" },
+            "2": { "name": "entity.name.function.arc" }
+          }
+        },
+        {
+          "comment": "flow block with identifier name",
+          "match": "\\b(flow)\\b\\s+([a-zA-Z][a-zA-Z0-9_\\-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.arc" },
+            "2": { "name": "entity.name.function.arc" }
+          }
+        },
+        {
+          "comment": "convention block with identifier name",
+          "match": "\\b(convention)\\b\\s+([a-zA-Z][a-zA-Z0-9_\\-]*)",
+          "captures": {
+            "1": { "name": "keyword.control.arc" },
+            "2": { "name": "entity.name.function.arc" }
+          }
+        },
+        {
+          "comment": "standalone context keyword",
+          "match": "\\b(context)\\b",
+          "name": "keyword.control.arc"
+        }
+      ]
+    },
+    "field-keywords": {
+      "match": "\\b(name|path|description|can|import|require|directive|filename|exports|allow|forbid|readonly|severity|pattern|package|except|in|steps|touches|tables|fields|layers|summary|critical-files|do-not-touch|version|stack|language)\\b",
+      "name": "support.function.arc"
+    },
+    "value-keywords": {
+      "match": "\\b(error|warning|true|false|async-function|type|interface|named|default|enum|function|class|const|enforce|no-circular-imports|no-dead-exports|no-implicit-any|no-floating-promises)\\b",
+      "name": "constant.language.arc"
+    },
+    "operators": {
+      "match": "\\+",
+      "name": "keyword.operator.arc"
+    },
+    "punctuation": {
+      "patterns": [
+        { 
+          "match": "[{}]", 
+          "name": "punctuation.section.arc" 
+        },
+        { 
+          "match": "[\\[\\]]", 
+          "name": "punctuation.definition.arc" 
+        }
+      ]
+    }
+  }
+}
